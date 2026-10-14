@@ -1,141 +1,197 @@
-# Telegram Serverless Realtime
+# Telegram Serverless Realtime — Long Polling for Telegram Mini Apps
 
-**Experimental near-realtime messaging using bounded long polling.**
+A JavaScript example for adding near-realtime communication to **Telegram Mini Apps**
+using [Telegram Serverless](https://core.telegram.org/bots/serverless).
+Create a room, invite another device, and exchange events through Telegram's
+built-in SQLite database. Telegram hosts the frontend and backend and verifies
+the user's identity; you don't need a separate application server.
 
-A small two-device demo running on [Telegram Serverless](https://core.telegram.org/bots/serverless):
-Mini App hosting, verified Telegram identity, temporary rooms, a durable SQLite
-event log, replay and receipt acknowledgements. No separate application server
-or external message relay.
+The demo includes event acknowledgements, reconnect replay, duplicate protection
+and round-trip measurements. Use it as a starting point for exploring multiplayer
+updates, shared rooms and other interactive Mini App features.
 
-**The backend polls its database every 250 ms while waiting.** An idle listener
-performs roughly four event reads per second, plus request-boundary work. This
-is a reference experiment, with no production scale or latency guarantee.
+**Transport:** bounded HTTP long polling, with a database check every 250 ms while
+waiting. This is an experimental implementation with published tests and
+[measurement results](docs/verification.md).
 
-## How it works
+## Try the demo on your own bot
 
-```mermaid
-sequenceDiagram
-    participant A as Device A
-    participant S as Telegram Serverless
-    participant D as SQLite event log
-    participant B as Device B
-    B->>S: read(after=cursor, waitMs=12000)
-    A->>S: publish(pulse, stable request ID)
-    S->>D: Insert event, deduplicating retries
-    S-->>A: Publication receipt
-    Note over S,D: The pending read checks SQLite every 250 ms
-    S->>D: Read events after cursor
-    S-->>B: Events
-    B->>S: publish(ack)
-    Note over A,B: Each device also runs its own receive loop
-```
-
-- One pending read per client; sending can run alongside it.
-- A 12-second wait budget, capped at 49 event queries per read.
-- One immediate query in short-poll mode, then a 500 ms client delay when empty.
-- Automatic short-poll fallback after two read failures.
-- Stable publication IDs make retries idempotent.
-- Ordered replay after a saved cursor; processing can repeat after a crash.
-- Pause/resume and background handling. A request already sent may still finish.
-- Same Telegram account on two devices, or an owner and one guest user.
-
-The 250 ms interval is **not** an end-to-end latency promise. ACK measurements
-use one sender-side clock and include both directions, queuing and processing.
-
-## Run your own
-
-Requires Node.js 24+, a Telegram bot with Serverless access, and Mini App setup
-in [@BotFather](https://t.me/BotFather). Use a dedicated test bot.
+You need **Node.js 24+**, a bot with Telegram Serverless enabled, and access to
+its Mini App settings in [@BotFather](https://t.me/BotFather).
 
 ```sh
 git clone https://github.com/inlanger/telegram-serverless-realtime.git
 cd telegram-serverless-realtime
 npm ci
-npm test
 npm run tgcloud -- login
 ```
 
-1. Set `BOT_USERNAME` in [`web/config.js`](web/config.js) to your bot's public
-   username, without `@`. This file contains no secret.
-2. Deploy the code and static files, then create the database tables:
+Set your bot's public username in [`web/config.js`](web/config.js), without `@`:
 
-   ```sh
-   npm run deploy
-   npm run tgcloud -- migrate
-   ```
-
-   `push` does not apply database migrations. Review and apply the two new tables
-   with `migrate` before using the demo. No front-end build step is needed.
-3. Set the **Main Mini App** URL in BotFather to the `https://app<id>.tgcloud.ai/`
-   URL printed by the CLI. Open `https://t.me/YOUR_BOT_USERNAME?startapp=rt`.
-4. Create a room, open its invite on a second device, and send a pulse.
-5. Use **Delivery checks** to send ten pulses, test pause/replay, switch polling
-   modes and download measurements.
-
-The CLI access token belongs only in the CLI's local credential storage. The
-browser uses the official `Telegram.WebApp.Serverless.call`; Telegram validates
-the launch data and supplies `ctx.initData.user.id`. There is no extra user login.
-If your environment requires an HTTP proxy, run the CLI with
-`NODE_USE_ENV_PROXY=1` on supported Node versions.
-
-## Tests and evidence
-
-```sh
-npm test
-npx playwright-core install chromium
-npm run test:browser
-npx playwright-core install webkit
-LAB_BROWSER=webkit npm run test:browser
+```js
+export const BOT_USERNAME = 'your_bot_username';
 ```
 
-For an existing Chromium installation, set `CHROME_PATH` when running the browser
-test. Linux WebKit may need Playwright's system dependencies installed.
+Deploy the JavaScript modules and frontend, then apply the database schema:
 
-Service/client tests use real local SQLite. Browser tests run two clients with a
-mock Telegram bridge backed by that service. They do **not** test genuine Telegram
-signatures or physical Telegram clients. No credentials or cloud calls are needed.
+```sh
+npm run deploy
+npm run tgcloud -- migrate
+```
 
-The original lab also passed cloud checks through `/manage/run`: concurrent guest
-claims, duplicate publications, membership checks, replay and a bounded empty wait.
-These used synthetic context and are **not** signed Mini App `/api` measurements.
-The extracted project has not been independently deployed as part of publication.
+The frontend is plain HTML, CSS and JavaScript, so there is no build step.
+Deployment and database migration are separate operations; apply both before
+opening the demo.
 
-See [verification and historical evidence](docs/verification.md),
-[protocol and limits](docs/protocol.md), and [research findings](docs/research.md).
+In BotFather, set the **Main Mini App** URL to the `https://app<id>.tgcloud.ai/`
+address printed by the CLI. Then open:
 
-## Bounds and trust
+```text
+https://t.me/YOUR_BOT_USERNAME?startapp=rt
+```
 
-| Limit | Value |
+Create a room and open its invite on a second device. You can use the same
+Telegram account on both devices, or invite one other user.
+
+Press **Send pulse** to see delivery and acknowledgement. Open **Delivery checks**
+to send a burst, pause and resume receiving, switch polling modes, or export
+measurements.
+
+## What is included
+
+- **Telegram authentication:** the official Mini App SDK sends launch data;
+  the platform verifies it before your endpoint runs.
+- **Private invitation rooms:** a random invite admits one guest, with subsequent
+  access checked against the room's owner and guest.
+- **Durable event delivery:** SQLite stores events in sequence for replay after
+  a connection interruption.
+- **Safe publication retries:** stable request IDs prevent duplicate writes when
+  a response is lost.
+- **A two-device test interface:** receipt acknowledgements, round-trip timing,
+  pause/resume and JSON result export.
+
+The client keeps one read request open at a time and can send while listening.
+After repeated read failures, it falls back to short polling. Receiving pauses
+when the Mini App goes into the background.
+
+## How long polling works on Telegram Serverless
+
+The receiving device calls `realtime` with its last processed event sequence.
+The endpoint checks for newer events and waits between checks, returning as soon
+as it finds events or reaches its wait budget. The client processes the response
+and starts the next read.
+
+```mermaid
+sequenceDiagram
+    participant A as Device A
+    participant S as Telegram Serverless
+    participant D as SQLite
+    participant B as Device B
+    B->>S: Read events after cursor
+    A->>S: Publish pulse with stable request ID
+    S->>D: Store event
+    S-->>A: Publication receipt
+    Note over S,D: Pending read checks SQLite every 250 ms
+    S->>D: Fetch new events
+    S-->>B: Return events
+    B->>S: Publish acknowledgement
+    Note over A,B: Both devices run a receive loop
+```
+
+The backend uses a 12-second wait budget with at most 49 event queries per read.
+Short-poll mode returns immediately and waits 500 ms between empty responses.
+Query and network time contribute to the actual request duration.
+
+This delivers near-realtime updates through ordinary JSON endpoints. It does
+not require WebSocket or SSE support in Telegram Serverless.
+
+See the [protocol reference](docs/protocol.md) for request fields, cursor handling,
+retry behavior and the runtime-specific waiting implementation.
+
+## Database cost and delivery guarantees
+
+An idle long-poll listener performs roughly **four event reads per second**, plus
+membership and request-boundary reads. Two listening devices therefore perform
+roughly eight event reads per second. Long polling reduces repeated HTTP requests;
+it does not remove database polling.
+
+The 250 ms check interval is not an end-to-end latency guarantee. The demo measures
+the full send → receive → ACK → sender cycle using one clock. Dividing that result
+by two does not establish one-way latency.
+
+Publication retries are idempotent. Event processing can repeat after a crash, so
+application handlers must tolerate replay. An ACK records receipt by a client;
+it does not prove that application side effects completed or that a peer is honest.
+
+| Demo limit | Value |
 | --- | --- |
 | Active rooms per owner | 4 |
 | Room lifetime | 1 hour |
 | Users per room | Owner + one guest |
-| Events per room | 2,000, including ACKs |
-| JSON payload | 1,024 JavaScript string code units after serialization |
-| Events in one read | 64 |
+| Stored events per room | 2,000, including ACKs |
+| Serialized JSON payload | 1,024 JavaScript string code units |
+| Events per response | 64 |
 
-A random invite lets its holder claim the guest slot. Subsequent access requires
-the stored owner/guest user ID. Device IDs are caller-supplied labels, not signed
-identities; an ACK is a diagnostic receipt, not proof of an honest remote peer.
+Expired data is cleaned up when a room is created. A pending server request may
+finish after the client pauses. Room bounds do not rate-limit incoming requests;
+the demo has not established production-scale capacity.
 
-Expired data is removed on room creation, with no background cleanup. These bounds
-are not rate limiting: an authenticated user can still issue concurrent requests.
-Do not treat this as a hardened public relay or a proven large-audience service.
+## Run the tests
 
-## Experimental combined exchange
+```sh
+npm test
 
-[`experiments/combined-exchange`](experiments/combined-exchange) contains a tested
-adapter for command + ACK + read in one request, plus ordered handling of overlapping
-responses. It reduces round trips in the measured sequential scenario, **not SQL
-work**. It is not wired into the demo or deployed by `tgcloud push`.
+# Browser checks
+npx playwright-core install chromium
+npm run test:browser
+
+# Optional WebKit checks
+npx playwright-core install webkit
+LAB_BROWSER=webkit npm run test:browser
+```
+
+The extracted project passed **22 service, client and experiment tests**, plus
+seven browser scenarios in each of Chromium and Linux WebKit. Tests use real
+local SQLite and a simulated Telegram bridge. No Telegram credentials are needed.
+
+The original lab also passed cloud checks for concurrent joins, access control,
+idempotency, replay and bounded waiting. Those checks used the management API
+with synthetic user context. Physical Telegram client latency, signed Mini App
+round trips and production capacity remain to be measured.
+
+See [verification and raw evidence](docs/verification.md) for the exact scope.
+For an existing Chromium installation, set `CHROME_PATH`. Linux WebKit may need
+Playwright's system dependencies. Local browser output goes to `test-results/`.
+
+## Explore the code
+
+| Path | Purpose |
+| --- | --- |
+| [`tgcloud/endpoints/realtime.js`](tgcloud/endpoints/realtime.js) | Mini App endpoint and bounded waiting |
+| [`tgcloud/lib/realtime.js`](tgcloud/lib/realtime.js) | Rooms, publications, access checks and reads |
+| [`tgcloud/schema.js`](tgcloud/schema.js) | SQLite tables and indexes |
+| [`web/realtime-client.js`](web/realtime-client.js) | Receive loop, ACKs, retries and cursor handling |
+| [`web/`](web/) | Two-device demo interface |
+| [`tests/`](tests/) | Service, client and browser checks |
+
+A separate [combined-exchange experiment](experiments/combined-exchange) batches
+command + ACK + read into one request. It reduced round trips in the measured
+sequential scenario while performing the same SQL work. It is tested separately
+and is not enabled in the demo.
+
+The [research notes](docs/research.md) cover WebSocket, SSE, WebRTC and other
+developers' approaches to realtime communication on Telegram Serverless.
 
 ## Contributing
 
-Useful reports include Telegram platform/version, network type, polling mode and
-the demo's exported measurements. Never attach tokens, `initData`, private room
-invites or CLI state. Physical iOS/Android results and measured ways to reduce idle
-database reads are especially welcome.
+Device reports are especially useful: include your Telegram platform/version,
+network type, polling mode and the demo's exported measurements. Keep tokens,
+`initData`, private room invites and CLI credentials out of reports.
 
-Extracted from the realtime research for
+The CLI access token stays in local CLI storage. Only the public bot username
+belongs in `web/config.js`. If your environment requires an HTTP proxy, run the
+CLI with `NODE_USE_ENV_PROXY=1` on supported Node versions.
+
+This project grew out of realtime research for
 [Terminal Tournament](https://github.com/inlanger/terminal-tournament).
-Independent community experiment; not an official Telegram project. [MIT](LICENSE).
+It is an independent community project, available under the [MIT license](LICENSE).
