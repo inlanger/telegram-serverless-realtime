@@ -7,7 +7,7 @@
   "license": "MIT",
   "repository": "github:inlanger/telegram-serverless-realtime",
   "scripts": {
-    "test": "node --test tests/*.test.js experiments/combined-exchange/protocol.test.mjs",
+    "test": "node --test tests/*.test.js",
     "test:browser": "node tests/browser.mjs",
     "tgcloud": "tgcloud",
     "deploy": "tgcloud push"

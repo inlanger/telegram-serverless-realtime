@@ -38,11 +38,6 @@ is needed where a direct route fails. A browser P2P channel does not independent
 let a backend push a completed job to a client. An external WebSocket/SSE relay
 can provide that channel, but introduces infrastructure outside Telegram.
 
-The combined-exchange experiment in this repository reduces sequential HTTP
-round trips without reducing SQL work. Its next integration check is one incoming
-read plus outgoing exchanges that also return events, sharing one serialized
-cursor processor. That integration is not part of the shipped demo.
-
 No new reproducible Telegram-only push mechanism was found in the reviewed public
 sources. Private discussions and unindexed implementations remain outside that
 claim. Contributions with code and clearly scoped measurements are welcome.

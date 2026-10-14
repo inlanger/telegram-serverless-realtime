@@ -86,7 +86,7 @@ npx playwright-core install chromium
 npm run test:browser
 ```
 
-**22 tests pass**, with seven browser scenarios also checked in both Chromium
+**14 tests pass**, with seven browser scenarios also checked in both Chromium
 and Linux WebKit. Browser tests use real SQLite and a simulated Telegram bridge.
 [Verification details and cloud measurements](docs/verification.md).
 
@@ -94,8 +94,6 @@ and Linux WebKit. Browser tests use real SQLite and a simulated Telegram bridge.
 
 - [Backend](tgcloud/lib/realtime.js) — rooms, access checks and event storage.
 - [Browser client](web/realtime-client.js) — polling, retries, ACKs and replay.
-- [Combined exchange](experiments/combined-exchange) — a separate experiment that
-  batches command + ACK + read to reduce HTTP round trips.
 - [Research notes](docs/research.md) — Telegram Serverless transport options,
   WebRTC and findings from other projects.
 
