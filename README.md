@@ -100,5 +100,4 @@ and Linux WebKit. Browser tests use real SQLite and a simulated Telegram bridge.
 Contributions and device measurements are welcome. Include your Telegram
 platform, network type and exported results; leave credentials and launch data out.
 
-Built during research for [Terminal Tournament](https://github.com/inlanger/terminal-tournament).
 Community project · [MIT license](LICENSE).
