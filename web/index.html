@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101521">
+  <title>Telegram Serverless Realtime</title>
+  <link rel="stylesheet" href="./realtime.css">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+<main>
+  <header><span class="eyebrow">TELEGRAM SERVERLESS · EXPERIMENTAL</span><h1>Send a pulse</h1><p>Near-realtime delivery between two devices, using long polling and Telegram's database.</p></header>
+  <p id="auth" role="status">Checking launch…</p>
+  <section id="setup" hidden>
+    <button id="create">Create room</button>
+    <p>Open the invite on a second device, using your account or one other Telegram user.</p>
+  </section>
+  <section id="session" hidden>
+    <div class="status-row"><span id="status" role="status">Connecting…</span><span id="room-label"></span></div>
+    <div class="signal" id="signal"><span id="signal-text">Waiting for a pulse</span></div>
+    <button id="send">Send pulse</button>
+    <div class="metrics">
+      <div><strong id="roundtrip">—</strong><span>Round trip, ms</span></div>
+      <div><strong id="received">0</strong><span>Pulses received</span></div>
+      <div><strong id="percentile">—</strong><span>Round-trip p95, ms</span></div>
+    </div>
+    <p class="explain">Round trip: send → second device → acknowledgement → sender. Measured on this device; includes network and processing time. This is not one-way latency.</p>
+    <label for="invite">Invite for the second device</label>
+    <input id="invite" readonly aria-label="Invite for the second device">
+    <div class="row"><button id="copy" class="secondary">Copy invite</button><button id="pause" class="secondary">Pause receiving</button></div>
+    <details>
+      <summary>Delivery checks</summary>
+      <label for="mode">Mode</label>
+      <select id="mode"><option value="long">Long poll · up to 12 s · DB check every 250 ms</option><option value="short">Short poll · 500 ms between empty reads</option></select>
+      <button id="burst" class="secondary">Send 10 pulses</button>
+      <p>Pause receiving on one device, send a few pulses from the other, then resume. Missing events should replay. Acknowledgements are delayed while paused.</p>
+      <p id="counters"></p>
+      <button id="download" class="secondary">Download results</button>
+      <ol id="events" aria-label="Recent events"></ol>
+    </details>
+    <p class="explain">A room lasts one hour and stores up to 2,000 events, including acknowledgements. One guest user can join. Create a new room after expiry.</p>
+  </section>
+  <p id="error" role="alert" hidden></p>
+  <footer>Experimental: about four event reads per second per idle listener. Authentication uses your Telegram account. Receiving pauses in the background; a pending server request can still finish.</footer>
+</main>
+<script type="module" src="./realtime-ui.js"></script>
+</body>
+</html>

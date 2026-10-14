@@ -1,0 +1,15 @@
+{
+  "engine": "webkit",
+  "route": "Browser + SQLite with mocked Telegram bridge; NOT native Telegram or deployed signed /api",
+  "checks": [
+    "standalone entry preserves launch fragment",
+    "invite start parameter joins room; ten peer events and ten ACK round trips",
+    "pause + three events + resume replays all three",
+    "reload preserves cursor/client and receives only new pulse",
+    "short polling mode delivers and acknowledges",
+    "third user cannot join full room",
+    "390px portrait / 844px landscape have no horizontal overflow"
+  ],
+  "failures": [],
+  "note": "Local mocked-bridge correctness check; latency intentionally omitted."
+}

@@ -1,0 +1,14 @@
+{
+  "route": "Browser + SQLite with mocked Telegram bridge; NOT native Telegram or deployed signed /api",
+  "checks": [
+    "startapp route preserves launch fragment and opens standalone lab",
+    "ten peer events and ten ACK round trips",
+    "pause + three events + resume replays all three",
+    "reload preserves cursor/client and receives only new pulse",
+    "short polling mode delivers and acknowledges",
+    "third user cannot join full room",
+    "390px portrait / 844px landscape have no horizontal overflow"
+  ],
+  "displayedRoundTripMs": "195",
+  "failures": []
+}

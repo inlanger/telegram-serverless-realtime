@@ -1,0 +1,22 @@
+{
+  "name": "telegram-serverless-realtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Experimental near-realtime messaging on Telegram Serverless using bounded long polling",
+  "license": "MIT",
+  "repository": "github:inlanger/telegram-serverless-realtime",
+  "scripts": {
+    "test": "node --test tests/*.test.js experiments/combined-exchange/protocol.test.mjs",
+    "test:browser": "node tests/browser.mjs",
+    "tgcloud": "tgcloud",
+    "deploy": "tgcloud push"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "@tgcloud/cli": "0.2.0",
+    "playwright-core": "1.56.1"
+  }
+}
